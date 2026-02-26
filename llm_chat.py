@@ -7,7 +7,8 @@ import requests
 from tinychat.predict import load_artifact, predict_intent
 
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
-OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.2:3b")  # example; you can change
+#OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.2:3b")  # example; you can change
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5:3b")  # example; you can change
 
 SYSTEM_PROMPT = (
     "You are a helpful assistant for a classroom demo. "
@@ -58,12 +59,24 @@ def main():
         try:
             answer = ollama_chat(messages)
         except Exception as e:
-            # If LLM server/model not available, fallback to intent bot behavior
-            print("bot> LLM backend unavailable. Type 'help'.")
+            print(f"bot> LLM backend unavailable: {type(e).__name__}: {e}")
             continue
 
         messages.append({"role": "assistant", "content": answer})
         print(f"bot> {answer}")
+
+def pick_model():
+    try:
+        r = requests.get(f"{OLLAMA_URL}/api/tags", timeout=10)
+        r.raise_for_status()
+        models = r.json().get("models", [])
+        if models:
+            return models[0]["name"]
+    except Exception:
+        pass
+    return OLLAMA_MODEL
+
+OLLAMA_MODEL = pick_model()
 
 if __name__ == "__main__":
     main()

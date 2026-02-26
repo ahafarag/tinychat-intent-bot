@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>TinyChat Web</title>
+  <style>
+    :root {
+      --bg-color: #f3f4f6;
+      --card-bg: #ffffff;
+      --text-main: #111827;
+      --text-muted: #6b7280;
+      --border-color: #e5e7eb;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --user-msg: #eff6ff;
+      --assistant-msg: #ffffff;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      background: var(--bg-color);
+      color: var(--text-main);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .wrap {
+      max-width: 800px;
+      margin: 0 auto;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 20px;
+    }
+
+    .header-title { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+    .small { color: var(--text-muted); font-size: 13px; margin-top: 4px; }
+
+    #resetBtn {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    #resetBtn:hover { background: #f9fafb; border-color: #d1d5db; }
+
+    .chat {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 20px 40px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      scrollbar-width: thin;
+      scrollbar-color: #cbd5e1 transparent;
+    }
+
+    .chat::-webkit-scrollbar { width: 6px; }
+    .chat::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
+
+    .msg { display: flex; width: 100%; }
+    .msg.user { justify-content: flex-end; }
+
+    .bubble {
+      max-width: 80%;
+      padding: 14px 18px;
+      border-radius: 16px;
+      line-height: 1.5;
+      font-size: 15px;
+      white-space: pre-wrap;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+
+      /* Arabic/LTR auto handling */
+      direction: auto;
+      unicode-bidi: plaintext;
+      text-align: start;
+    }
+
+    .user .bubble {
+      background: var(--primary);
+      color: #ffffff;
+      border-bottom-right-radius: 4px;
+    }
+
+    .assistant .bubble {
+      background: var(--assistant-msg);
+      border: 1px solid var(--border-color);
+      border-bottom-left-radius: 4px;
+    }
+
+    .input-area {
+      position: relative;
+      margin-top: 10px;
+      background: var(--card-bg);
+      border-radius: 16px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      padding: 8px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 12px 16px;
+      border: none;
+      background: transparent;
+      font-size: 15px;
+      outline: none;
+      color: var(--text-main);
+
+      /* Arabic/LTR auto handling */
+      direction: auto;
+      unicode-bidi: plaintext;
+      text-align: start;
+    }
+
+    input[type="text"]::placeholder { color: #9ca3af; }
+
+    #sendBtn {
+      padding: 10px 20px;
+      border-radius: 10px;
+      border: none;
+      background: var(--primary);
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    #sendBtn:hover:not(:disabled) { background: var(--primary-hover); }
+    #sendBtn:disabled { background: #9ca3af; cursor: not-allowed; }
+
+    #status {
+      height: 20px;
+      text-align: center;
+      font-style: italic;
+      color: var(--text-muted);
+      margin-top: 12px;
+      font-size: 13px;
+      transition: opacity 0.3s;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .thinking { animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    /* Code block rendering inside assistant bubbles */
+    .assistant .bubble pre {
+    margin: 10px 0 0 0;
+    padding: 12px 14px;
+    background: #0b1020;
+    color: #e5e7eb;
+    border-radius: 12px;
+    overflow-x: auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 13px;
+    line-height: 1.45;
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
+    }
+
+    .assistant .bubble code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    /* Optional: inline code style (when not in a pre block) */
+    .assistant .bubble .inline-code {
+    padding: 2px 6px;
+    border-radius: 8px;
+    background: #f3f4f6;
+    border: 1px solid var(--border-color);
+    }
+
+    /* Copy button */
+    .code-wrap {
+    position: relative;
+    margin-top: 10px;
+    }
+
+    .copy-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    padding: 6px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.08);
+    color: #e5e7eb;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    }
+
+    .copy-btn:hover { background: rgba(255,255,255,0.14); }
+    .copy-btn:active { transform: translateY(1px); }
+
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="header">
+      <div>
+        <div class="header-title">TinyChat Web</div>
+        <div class="small">Local Ollama model via FastAPI</div>
+      </div>
+      <button id="resetBtn" type="button">Reset Chat</button>
+    </div>
+
+    <div class="chat" id="chat"></div>
+
+    <div>
+      <div class="input-area">
+        <!-- dir="auto" makes cursor + punctuation behave correctly for Arabic -->
+        <input id="text" type="text" placeholder="Message TinyChat..." autocomplete="off" dir="auto" />
+        <button id="sendBtn" type="button">Send</button>
+      </div>
+      <div id="status"></div>
+    </div>
+  </div>
+
+<script>
+  const chatEl = document.getElementById("chat");
+  const textEl = document.getElementById("text");
+  const sendBtn = document.getElementById("sendBtn");
+  const resetBtn = document.getElementById("resetBtn");
+  const statusEl = document.getElementById("status");
+
+  let messages = [
+    { role: "system", content: "You are a helpful assistant for a classroom demo. Keep replies short." }
+  ];
+
+  function escapeHtml(s) {
+    return s
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  // Very small renderer: supports ```lang ... ``` blocks and inline `code`
+  function renderAssistantContent(text) {
+    // Split into segments by fenced code blocks
+    const regex = /```(\w+)?\n([\s\S]*?)```/g;
+    let lastIndex = 0;
+    let html = "";
+
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+      const before = text.slice(lastIndex, match.index);
+      html += renderTextWithInlineCode(before);
+
+      const lang = (match[1] || "").trim();
+      const code = match[2] || "";
+
+      html += `
+        <div class="code-wrap">
+          <button class="copy-btn" data-code="${escapeHtml(code)}">Copy</button>
+          <pre><code>${escapeHtml(code)}</code></pre>
+        </div>
+      `;
+
+      lastIndex = regex.lastIndex;
+    }
+
+    const tail = text.slice(lastIndex);
+    html += renderTextWithInlineCode(tail);
+    return html.trim();
+  }
+
+  function renderTextWithInlineCode(text) {
+    if (!text) return "";
+    // escape then convert `inline` to spans
+    const escaped = escapeHtml(text);
+    return escaped.replace(/`([^`]+)`/g, '<span class="inline-code">$1</span>').replace(/\n/g, "<br>");
+  }
+
+  function addMessage(role, content) {
+    if (role !== "system") {
+      messages.push({ role, content });
+    }
+
+    const msg = document.createElement("div");
+    msg.className = "msg " + (role === "user" ? "user" : "assistant");
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+    bubble.dir = "auto";
+
+    if (role === "assistant") {
+      bubble.innerHTML = renderAssistantContent(content);
+    } else {
+      bubble.textContent = content;
+    }
+
+    msg.appendChild(bubble);
+    chatEl.appendChild(msg);
+    chatEl.scrollTop = chatEl.scrollHeight;
+
+    // Wire copy buttons (assistant only)
+    if (role === "assistant") {
+      bubble.querySelectorAll(".copy-btn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const code = btn.getAttribute("data-code") || "";
+          try {
+            await navigator.clipboard.writeText(code);
+            btn.textContent = "Copied";
+            setTimeout(() => (btn.textContent = "Copy"), 900);
+          } catch {
+            btn.textContent = "Failed";
+            setTimeout(() => (btn.textContent = "Copy"), 900);
+          }
+        });
+      });
+    }
+  }
+
+  async function send() {
+    const userText = textEl.value.trim();
+    if (!userText) return;
+    textEl.value = "";
+    addMessage("user", userText);
+
+    sendBtn.disabled = true;
+    statusEl.textContent = "TinyChat is thinking...";
+    statusEl.classList.add("thinking");
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages })
+      });
+      const data = await res.json();
+      addMessage("assistant", data.reply || "No reply");
+    } catch (e) {
+      addMessage("assistant", "Network error: " + e);
+    } finally {
+      sendBtn.disabled = false;
+      statusEl.textContent = "";
+      statusEl.classList.remove("thinking");
+      textEl.focus();
+    }
+  }
+
+  sendBtn.addEventListener("click", send);
+  textEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") send();
+  });
+
+  resetBtn.addEventListener("click", () => {
+    messages = [{ role: "system", content: "You are a helpful assistant for a classroom demo. Keep replies short." }];
+    chatEl.innerHTML = "";
+    statusEl.textContent = "";
+    textEl.focus();
+    addMessage("assistant", "Chat reset. How can I help you today?");
+  });
+
+  addMessage("assistant", "Ready. Say hi.");
+</script>
+
+</body>
+</html>

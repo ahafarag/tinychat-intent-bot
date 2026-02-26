@@ -34,3 +34,8 @@ This repo can optionally use a local LLM via Ollama's `/api/chat` endpoint.
 2) Train the intent model first:
 ```bash
 python train.py
+```
+### Web UI
+```bash
+python train.py
+uvicorn webapp:app --host 127.0.0.1 --port 8000
