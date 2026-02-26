@@ -21,3 +21,15 @@ python -m venv .venv
 source .venv/bin/activate
 
 pip install -r requirements.txt
+
+## Rich chat with a local open-source LLM (Ollama)
+
+This repo can optionally use a local LLM via Ollama's `/api/chat` endpoint.
+
+1) Install Ollama and pull a model (example):
+- llama3.2:3b (small)
+- qwen2.5:3b (small)
+
+2) Train the intent model first:
+```bash
+python train.py
