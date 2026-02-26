@@ -21,6 +21,7 @@ python -m venv .venv
 source .venv/bin/activate
 
 pip install -r requirements.txt
+```
 
 ## Rich chat with a local open-source LLM (Ollama)
 
